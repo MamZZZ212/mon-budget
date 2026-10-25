@@ -1,0 +1,6 @@
+# Données personnelles : restent sur le PC, jamais publiées
+data/seed.js
+data/personal-defaults.js
+.env
+__pycache__/
+*.pyc

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Passerelle Mes Investissements</title>
+  <!-- Chargée en iframe invisible par l'appli Mes Investissements (localhost:5179) :
+       calcule un résumé du budget et le lui transmet. Rien n'est envoyé ailleurs. -->
+</head>
+<body>
+  <script src="js/profile-registry.js"></script>
+  <script>
+    // Budget du profil demandé par Mes Investissements (avant de charger le stockage).
+    const askedProfile = new URLSearchParams(location.search).get('profile');
+    if (askedProfile) ProfileRegistry.use(askedProfile);
+  </script>
+  <script src="data/personal-defaults.js"></script>
+  <script src="data/seed.js"></script>
+  <script src="js/money-format.js"></script>
+  <script src="js/category-rules.js"></script>
+  <script src="js/categorizer.js"></script>
+  <script src="js/wealth-profile.js"></script>
+  <script src="js/budget-store.js"></script>
+  <script src="js/budget-analytics.js"></script>
+  <script src="js/savings-insights.js"></script>
+  <script src="js/savings-simulator.js"></script>
+  <script>
+    (function () {
+      const ALLOWED = ['http://localhost:5179', 'http://127.0.0.1:5179', 'https://mamzzz212.github.io'];
+      const target = new URLSearchParams(location.search).get('origin');
+      if (!ALLOWED.includes(target) || window.parent === window) return;
+
+      const state = Store.load();
+      const model = BudgetAnalytics.buildModel(state);
+      let summary = { n: 0 };
+      if (model.n) {
+        const s = state.settings;
+        const sc = SavingsSimulator.scenarios(model, s, state.wealth);
+        const plan = sc.list.find((x) => x.id === 'plan');
+        const actuel = sc.list.find((x) => x.id === 'actuel');
+        const last = model.cycles[model.n - 1];
+        summary = {
+          n: model.n, from: model.cycles[0].period.from, to: last.period.to,
+          avgIncome: model.avg.income, avgExpense: model.avg.expense, avgSaving: actuel.saving,
+          planSaving: plan.saving, planExpense: plan.expense, revolutMonthly: s.revolut,
+          savingsGoal: s.goal, balance: model.balance, pee: WealthProfile.peeTotal(state.wealth),
+          bonusSaved: sc.bonus.saved, bonusMonth: state.wealth.bonusMonth,
+        };
+      }
+      window.parent.postMessage({ type: 'budget-summary', summary }, target);
+    })();
+  </script>
+</body>
+</html>
